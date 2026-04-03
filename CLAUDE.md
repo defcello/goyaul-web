@@ -28,7 +28,8 @@ auth/auth.go        — Login(), lockout logic, in-memory IP rate limiter
                       Types: SessionRecord, UserLookupResult, LogLoginParams, ErrNotFound
                       Interface: LoginDB (implemented by consumers e.g. skilltrails/internal/db)
 auth/auth_test.go   — Unit tests (14 tests, stub LoginDB)
-middleware/         — SecurityHeaders, RequestLogger, LoadSession(cookieName, SessionDB), RequireAuth
+middleware/         — SecurityHeaders, RequestLogger, LoadSession(cookieName, SessionDB), RequireAuth,
+                      NewUserRateLimit(max, window) — in-memory per-user POST rate limiter
                       SessionFromContext / WithSession helpers
 config/config.go    — cfg.json parsing + DSN builder
 ```
