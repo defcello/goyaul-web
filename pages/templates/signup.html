@@ -1,0 +1,21 @@
+{{define "signup"}}
+{{template "page-head" .}}
+
+<main class="auth-page">
+  <div class="auth-card">
+    <h1 class="auth-title">{{.SiteName}}</h1>
+    <h2 class="auth-subtitle">Create an Account</h2>
+
+    <div class="placeholder-notice">
+      <p>Account creation is coming soon.</p>
+      <p>In the meantime, please contact an administrator to get access.</p>
+    </div>
+
+    <p class="auth-footer">
+      Already have an account? <a href="/login">Sign in</a>
+    </p>
+  </div>
+</main>
+
+{{template "page-foot" .}}
+{{end}}

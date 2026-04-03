@@ -1,0 +1,121 @@
+{{define "account"}}
+{{template "page-head" .}}
+
+{{template "nav-authenticated" .}}
+
+<main class="content-page">
+  <div class="content-card">
+    <h2>Account Settings</h2>
+
+    {{if .Flash}}
+    <div class="flash flash--notice" role="alert">{{.Flash}}</div>
+    {{end}}
+
+    {{/* ── Display Name ── */}}
+    <section class="settings-section">
+      <h3 class="settings-section__title">Display Name</h3>
+      <form method="POST" action="/account/displayname" class="settings-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="field">
+          <label for="name_display">Display name</label>
+          <input
+            type="text"
+            id="name_display"
+            name="name_display"
+            value="{{.NameDisplay}}"
+            maxlength="100"
+            autocomplete="name"
+            required
+          >
+        </div>
+        <button type="submit" class="btn btn--primary btn--inline">Save</button>
+      </form>
+    </section>
+
+    {{/* ── Email Address ── */}}
+    <section class="settings-section">
+      <h3 class="settings-section__title">Email Address</h3>
+      <form method="POST" action="/account/email" class="settings-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="field">
+          <label for="email">Email address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value="{{.Email}}"
+            maxlength="254"
+            autocomplete="email"
+            required
+          >
+        </div>
+        <button type="submit" class="btn btn--primary btn--inline">Save</button>
+      </form>
+    </section>
+
+    {{/* ── Phone Number ── */}}
+    <section class="settings-section">
+      <h3 class="settings-section__title">Phone Number</h3>
+      <form method="POST" action="/account/phone" class="settings-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="field">
+          <label for="phone_sms">SMS phone number (optional)</label>
+          <input
+            type="tel"
+            id="phone_sms"
+            name="phone_sms"
+            value="{{.Phone}}"
+            maxlength="15"
+            autocomplete="tel"
+            placeholder="+15551234567"
+          >
+        </div>
+        <button type="submit" class="btn btn--primary btn--inline">Save</button>
+      </form>
+    </section>
+
+    {{/* ── Password ── */}}
+    <section class="settings-section">
+      <h3 class="settings-section__title">Password</h3>
+      <form method="POST" action="/account/password" class="settings-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="field">
+          <label for="current_password">Current password</label>
+          <input
+            type="password"
+            id="current_password"
+            name="current_password"
+            autocomplete="current-password"
+            required
+          >
+        </div>
+        <div class="field">
+          <label for="new_password">New password</label>
+          <input
+            type="password"
+            id="new_password"
+            name="new_password"
+            autocomplete="new-password"
+            minlength="8"
+            required
+          >
+        </div>
+        <div class="field">
+          <label for="confirm_password">Confirm new password</label>
+          <input
+            type="password"
+            id="confirm_password"
+            name="confirm_password"
+            autocomplete="new-password"
+            required
+          >
+        </div>
+        <button type="submit" class="btn btn--primary btn--inline">Change Password</button>
+      </form>
+    </section>
+
+  </div>
+</main>
+
+{{template "page-foot" .}}
+{{end}}

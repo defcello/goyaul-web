@@ -1,0 +1,11 @@
+{{define "home"}}
+{{template "page-head" .}}
+
+{{template "nav-authenticated" .}}
+
+<main class="home-page">
+  <h1 class="greeting">Hello, {{.NameDisplay}}!</h1>
+</main>
+
+{{template "page-foot" .}}
+{{end}}

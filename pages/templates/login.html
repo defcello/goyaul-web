@@ -1,0 +1,56 @@
+{{define "login"}}
+{{template "page-head" .}}
+
+<main class="auth-page">
+  <div class="auth-card">
+    <h1 class="auth-title">{{.SiteName}}</h1>
+    <h2 class="auth-subtitle">Sign In</h2>
+
+    {{if .Flash}}
+    <div class="flash flash--error" role="alert">{{.Flash}}</div>
+    {{end}}
+
+    <form method="POST" action="/login" class="auth-form" novalidate>
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+      <div class="field">
+        <label for="username_or_email">Username or Email</label>
+        <input
+          type="text"
+          id="username_or_email"
+          name="username_or_email"
+          autocomplete="username"
+          autofocus
+          required
+        >
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          autocomplete="current-password"
+          required
+        >
+      </div>
+
+      <div class="field field--checkbox">
+        <label class="checkbox-label">
+          <input type="checkbox" name="remember_me" value="yes">
+          Remember me
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn--primary">Sign In</button>
+    </form>
+
+    <p class="auth-footer">
+      Don't have an account? <a href="/signup">Sign up</a>
+    </p>
+  </div>
+</main>
+
+{{template "page-foot" .}}
+{{end}}

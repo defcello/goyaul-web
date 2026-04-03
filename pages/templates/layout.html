@@ -1,0 +1,37 @@
+{{define "page-head"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{.Title}} — {{.SiteName}}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+{{end}}
+
+{{define "page-foot"}}
+</body>
+</html>
+{{end}}
+
+{{define "nav-authenticated"}}
+<nav class="top-nav">
+  <a class="site-name" href="/">{{.SiteName}}</a>
+  <div class="avatar-wrapper">
+    <button class="avatar" id="avatar-btn" aria-haspopup="true" aria-expanded="false"
+            aria-label="User menu">{{.Initials}}</button>
+    <div class="dropdown" id="avatar-dropdown" role="menu" hidden>
+      <a class="dropdown-item" href="/account" role="menuitem">Account Settings</a>
+      <a class="dropdown-item" href="/account/sessions" role="menuitem">Active Sessions</a>
+      <form method="POST" action="/logout" class="dropdown-form">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <button type="submit" class="dropdown-item dropdown-item--button" role="menuitem">
+          Log Out
+        </button>
+      </form>
+    </div>
+  </div>
+</nav>
+<script src="/static/js/nav.js"></script>
+{{end}}

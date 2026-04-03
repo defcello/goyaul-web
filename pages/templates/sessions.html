@@ -1,0 +1,62 @@
+{{define "sessions"}}
+{{template "page-head" .}}
+
+{{template "nav-authenticated" .}}
+
+<main class="content-page">
+  <div class="content-card">
+    <h2>Active Sessions</h2>
+
+    {{if .Flash}}
+    <div class="flash flash--notice" role="alert">{{.Flash}}</div>
+    {{end}}
+
+    <p>These are the browsers and devices currently signed in to your account. Revoke any session you don't recognise.</p>
+
+    {{if .Sessions}}
+    <table class="sessions-table">
+      <thead>
+        <tr>
+          <th>Signed in</th>
+          <th>Last active</th>
+          <th>IP address</th>
+          <th>Browser / device</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Sessions}}
+        <tr{{if .IsCurrent}} class="sessions-table__current"{{end}}>
+          <td>{{.Created.Format "2006-01-02 15:04 UTC"}}</td>
+          <td>
+            {{if .LastActive}}
+              {{.LastActive.Format "2006-01-02 15:04 UTC"}}
+            {{else}}
+              —
+            {{end}}
+          </td>
+          <td>{{if .IP}}{{.IP}}{{else}}—{{end}}</td>
+          <td class="sessions-table__ua">{{if .UserAgent}}{{.UserAgent}}{{else}}—{{end}}</td>
+          <td>
+            {{if .IsCurrent}}
+              <span class="sessions-table__badge">This session</span>
+            {{else}}
+              <form method="POST" action="/account/sessions/{{.SessionID}}/revoke">
+                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                <button type="submit" class="btn btn--danger btn--inline btn--sm">Revoke</button>
+              </form>
+            {{end}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p>No active sessions found.</p>
+    {{end}}
+
+  </div>
+</main>
+
+{{template "page-foot" .}}
+{{end}}
