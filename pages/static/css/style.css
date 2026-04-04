@@ -257,10 +257,47 @@ a.site-name:hover {
 .btn--primary:hover {
   background: var(--color-primary-dark);
 }
+.btn--secondary {
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.btn--secondary:hover {
+  background: #edf2f7;
+}
+.btn--danger {
+  background: #c53030;
+  color: #fff;
+}
+.btn--danger:hover {
+  background: #9b2c2c;
+}
 .btn--inline {
   width: auto;
   align-self: flex-start;
   padding: 10px 20px;
+}
+.btn--sm {
+  padding: 8px 14px;
+  font-size: 0.875rem;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
 }
 
 /* Account settings sections */
@@ -336,10 +373,30 @@ a.site-name:hover {
   box-shadow: var(--shadow);
   padding: 36px;
 }
+.content-card--narrow {
+  max-width: 460px;
+}
 
 .content-card h2 {
   font-size: 1.3rem;
   font-weight: 700;
   margin-bottom: 20px;
   color: var(--color-text);
+}
+
+.passkey-offer-copy {
+  margin-bottom: 24px;
+  color: var(--color-muted);
+}
+
+.passkey-offer-skip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  text-decoration: none;
+}
+
+.auth-footer--tight {
+  margin-top: 10px;
 }

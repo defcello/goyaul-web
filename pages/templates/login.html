@@ -47,9 +47,11 @@
     </form>
 
     {{if .PasskeysEnabled}}
-    <div class="auth-divider" role="presentation">or</div>
-    <button type="button" class="btn btn--secondary" id="passkey-login-button">Sign In With Passkey</button>
-    <p class="auth-footer" id="passkey-login-status" hidden></p>
+    <div id="passkey-login-ui" hidden>
+      <div class="auth-divider" role="presentation">or</div>
+      <button type="button" class="btn btn--secondary" id="passkey-login-button">Sign In With Passkey</button>
+      <p class="auth-footer" id="passkey-login-status" hidden></p>
+    </div>
     {{end}}
 
     <p class="auth-footer">
@@ -61,11 +63,11 @@
 {{if .PasskeysEnabled}}
 <script>
 (() => {
+  const passkeyUI = document.getElementById("passkey-login-ui");
   const button = document.getElementById("passkey-login-button");
   const status = document.getElementById("passkey-login-status");
   const rememberMe = document.querySelector('input[name="remember_me"]');
   if (!button || !window.PublicKeyCredential || !navigator.credentials) {
-    if (button) button.hidden = true;
     return;
   }
 
@@ -114,7 +116,22 @@
     authenticatorAttachment: credential.authenticatorAttachment || "",
   });
 
-  button.addEventListener("click", async () => {
+  const shouldShowPasskeyLogin = async () => {
+    try {
+      if (PublicKeyCredential.getClientCapabilities) {
+        const caps = await PublicKeyCredential.getClientCapabilities();
+        return !!(caps.passkeyPlatformAuthenticator || caps.conditionalGet || caps.hybridTransport);
+      }
+      if (PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+        return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleLoginClick = async () => {
     setStatus("");
     button.disabled = true;
     try {
@@ -148,6 +165,12 @@
     } finally {
       button.disabled = false;
     }
+  };
+
+  shouldShowPasskeyLogin().then((show) => {
+    if (!show) return;
+    passkeyUI.hidden = false;
+    button.addEventListener("click", handleLoginClick);
   });
 })();
 </script>
