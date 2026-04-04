@@ -46,11 +46,112 @@
       <button type="submit" class="btn btn--primary">Sign In</button>
     </form>
 
+    {{if .PasskeysEnabled}}
+    <div class="auth-divider" role="presentation">or</div>
+    <button type="button" class="btn btn--secondary" id="passkey-login-button">Sign In With Passkey</button>
+    <p class="auth-footer" id="passkey-login-status" hidden></p>
+    {{end}}
+
     <p class="auth-footer">
       Don't have an account? <a href="/signup">Sign up</a>
     </p>
   </div>
 </main>
+
+{{if .PasskeysEnabled}}
+<script>
+(() => {
+  const button = document.getElementById("passkey-login-button");
+  const status = document.getElementById("passkey-login-status");
+  const rememberMe = document.querySelector('input[name="remember_me"]');
+  if (!button || !window.PublicKeyCredential || !navigator.credentials) {
+    if (button) button.hidden = true;
+    return;
+  }
+
+  const setStatus = (message) => {
+    status.hidden = !message;
+    status.textContent = message || "";
+  };
+
+  const base64UrlToBytes = (value) => {
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+    const binary = atob(padded);
+    return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  };
+
+  const bytesToBase64Url = (value) => {
+    const bytes = value instanceof ArrayBuffer ? new Uint8Array(value) : new Uint8Array(value.buffer);
+    let binary = "";
+    bytes.forEach((byte) => binary += String.fromCharCode(byte));
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  };
+
+  const decodeRequest = (json) => {
+    const publicKey = json.publicKey;
+    publicKey.challenge = base64UrlToBytes(publicKey.challenge);
+    if (publicKey.allowCredentials) {
+      publicKey.allowCredentials = publicKey.allowCredentials.map((credential) => ({
+        ...credential,
+        id: base64UrlToBytes(credential.id),
+      }));
+    }
+    return { publicKey, mediation: json.mediation };
+  };
+
+  const encodeAssertion = (credential) => JSON.stringify({
+    id: credential.id,
+    rawId: bytesToBase64Url(credential.rawId),
+    type: credential.type,
+    response: {
+      authenticatorData: bytesToBase64Url(credential.response.authenticatorData),
+      clientDataJSON: bytesToBase64Url(credential.response.clientDataJSON),
+      signature: bytesToBase64Url(credential.response.signature),
+      userHandle: credential.response.userHandle ? bytesToBase64Url(credential.response.userHandle) : "",
+    },
+    clientExtensionResults: credential.getClientExtensionResults(),
+    authenticatorAttachment: credential.authenticatorAttachment || "",
+  });
+
+  button.addEventListener("click", async () => {
+    setStatus("");
+    button.disabled = true;
+    try {
+      const startBody = new URLSearchParams();
+      if (rememberMe && rememberMe.checked) {
+        startBody.set("remember_me", "yes");
+      }
+
+      const startResponse = await fetch("/login/passkeys/options", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: startBody.toString(),
+      });
+      if (!startResponse.ok) throw new Error("Unable to start passkey login.");
+
+      const requestOptions = decodeRequest(await startResponse.json());
+      const credential = await navigator.credentials.get(requestOptions);
+      if (!credential) throw new Error("No passkey was selected.");
+
+      const finishResponse = await fetch("/login/passkeys/finish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: encodeAssertion(credential),
+      });
+      const payload = await finishResponse.json().catch(() => ({}));
+      if (!finishResponse.ok) throw new Error(payload.error || "Passkey login failed.");
+
+      window.location.href = payload.redirect || "/";
+    } catch (error) {
+      setStatus(error.message || "Passkey login failed.");
+    } finally {
+      button.disabled = false;
+    }
+  });
+})();
+</script>
+{{end}}
 
 {{template "page-foot" .}}
 {{end}}
