@@ -1,4 +1,4 @@
-# GoYAUL.Web
+# goyaul-web
 
 A Go library for building authenticated web experiences.
 Part of the YAUL family alongside [PyYAUL.Web](https://github.com/defcello/PyYAUL.Web).

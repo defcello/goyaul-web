@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-**GoYAUL.Web** is a generic Go web authentication framework extracted from SkillTrails. It provides login logic, HTTP middleware, and configuration loading for Go web applications built with chi.
+**goyaul-web** is a generic Go web authentication framework extracted from SkillTrails. It provides login logic, HTTP middleware, and configuration loading for Go web applications built with chi.
 
 This repo is one of several sub-repos managed under `devenv-skilltrails/` via `manifest.xml`.
 
@@ -48,4 +48,4 @@ config/config.go    — cfg.json parsing + DSN builder
 
 ## Consumers
 
-- `github.com/defcello/skilltrails` — uses local replace: `replace github.com/defcello/goyaul-web => ../GoYAUL.Web`
+- `github.com/defcello/skilltrails` — uses local replace: `replace github.com/defcello/goyaul-web => ../goyaul-web`
