@@ -190,6 +190,9 @@ func failResult() LoginResult {
 type PrivilegeLogParams struct {
 	SessionID   int
 	PrivilegeID int
+	// AllowRuleID is the table_privilege_group_allow.id of the winning rule,
+	// or nil when the deny was implicit (no matching rule existed).
+	AllowRuleID *int
 	Allowed     bool
 }
 
@@ -199,8 +202,10 @@ type PrivilegeDB interface {
 	// The path is ordered from root to leaf, e.g. ["sudo", "users", "read"].
 	// Returns ErrNotFound when no matching privilege exists.
 	FindPrivilegeID(ctx context.Context, path []string) (int, error)
-	// UserHasPrivilege reports whether userID holds the privilege identified by privilegeID.
-	UserHasPrivilege(ctx context.Context, userID, privilegeID int) (bool, error)
+	// UserHasPrivilegeWithRule reports whether userID holds the privilege identified
+	// by privilegeID, and returns the table_privilege_group_allow.id of the winning
+	// rule (nil when the deny is implicit — no rule matched).
+	UserHasPrivilegeWithRule(ctx context.Context, userID, privilegeID int) (bool, *int, error)
 	// LogPrivilegeCheck writes a privilege check event to the audit log.
 	LogPrivilegeCheck(ctx context.Context, params PrivilegeLogParams) error
 }
@@ -228,13 +233,14 @@ func CheckPrivilege(ctx context.Context, d PrivilegeDB, session *SessionRecord, 
 		return false, nil
 	}
 
-	allowed, err := d.UserHasPrivilege(ctx, session.UserID, privilegeID)
+	allowed, ruleID, err := d.UserHasPrivilegeWithRule(ctx, session.UserID, privilegeID)
 	if err != nil {
 		return false, err
 	}
 	_ = d.LogPrivilegeCheck(ctx, PrivilegeLogParams{
 		SessionID:   session.SessionID,
 		PrivilegeID: privilegeID,
+		AllowRuleID: ruleID,
 		Allowed:     allowed,
 	})
 	return allowed, nil

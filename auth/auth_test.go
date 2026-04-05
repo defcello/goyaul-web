@@ -340,16 +340,16 @@ func TestLogin_Success_RememberMe(t *testing.T) {
 
 // stubPrivilegeDB implements PrivilegeDB using function fields.
 type stubPrivilegeDB struct {
-	findPrivilegeIDFn  func(ctx context.Context, path []string) (int, error)
-	userHasPrivilegeFn func(ctx context.Context, userID, privilegeID int) (bool, error)
-	logCheckFn         func(ctx context.Context, params PrivilegeLogParams) error
+	findPrivilegeIDFn          func(ctx context.Context, path []string) (int, error)
+	userHasPrivilegeWithRuleFn func(ctx context.Context, userID, privilegeID int) (bool, *int, error)
+	logCheckFn                 func(ctx context.Context, params PrivilegeLogParams) error
 }
 
 func (s *stubPrivilegeDB) FindPrivilegeID(ctx context.Context, path []string) (int, error) {
 	return s.findPrivilegeIDFn(ctx, path)
 }
-func (s *stubPrivilegeDB) UserHasPrivilege(ctx context.Context, userID, privilegeID int) (bool, error) {
-	return s.userHasPrivilegeFn(ctx, userID, privilegeID)
+func (s *stubPrivilegeDB) UserHasPrivilegeWithRule(ctx context.Context, userID, privilegeID int) (bool, *int, error) {
+	return s.userHasPrivilegeWithRuleFn(ctx, userID, privilegeID)
 }
 func (s *stubPrivilegeDB) LogPrivilegeCheck(ctx context.Context, params PrivilegeLogParams) error {
 	if s.logCheckFn != nil {
@@ -358,11 +358,13 @@ func (s *stubPrivilegeDB) LogPrivilegeCheck(ctx context.Context, params Privileg
 	return nil
 }
 
+func intPtr(v int) *int { return &v }
+
 func TestCheckPrivilege_Allowed(t *testing.T) {
 	var logged PrivilegeLogParams
 	d := &stubPrivilegeDB{
-		findPrivilegeIDFn:  func(_ context.Context, _ []string) (int, error) { return 7, nil },
-		userHasPrivilegeFn: func(_ context.Context, _, _ int) (bool, error) { return true, nil },
+		findPrivilegeIDFn:          func(_ context.Context, _ []string) (int, error) { return 7, nil },
+		userHasPrivilegeWithRuleFn: func(_ context.Context, _, _ int) (bool, *int, error) { return true, intPtr(99), nil },
 		logCheckFn: func(_ context.Context, p PrivilegeLogParams) error {
 			logged = p
 			return nil
@@ -379,13 +381,16 @@ func TestCheckPrivilege_Allowed(t *testing.T) {
 	if logged.SessionID != 5 || logged.PrivilegeID != 7 || !logged.Allowed {
 		t.Errorf("unexpected log params: %+v", logged)
 	}
+	if logged.AllowRuleID == nil || *logged.AllowRuleID != 99 {
+		t.Errorf("expected AllowRuleID=99, got %v", logged.AllowRuleID)
+	}
 }
 
 func TestCheckPrivilege_Denied(t *testing.T) {
 	var logged PrivilegeLogParams
 	d := &stubPrivilegeDB{
-		findPrivilegeIDFn:  func(_ context.Context, _ []string) (int, error) { return 7, nil },
-		userHasPrivilegeFn: func(_ context.Context, _, _ int) (bool, error) { return false, nil },
+		findPrivilegeIDFn:          func(_ context.Context, _ []string) (int, error) { return 7, nil },
+		userHasPrivilegeWithRuleFn: func(_ context.Context, _, _ int) (bool, *int, error) { return false, intPtr(88), nil },
 		logCheckFn: func(_ context.Context, p PrivilegeLogParams) error {
 			logged = p
 			return nil
@@ -401,6 +406,32 @@ func TestCheckPrivilege_Denied(t *testing.T) {
 	}
 	if logged.Allowed {
 		t.Error("expected log entry to record Allowed=false")
+	}
+	if logged.AllowRuleID == nil || *logged.AllowRuleID != 88 {
+		t.Errorf("expected AllowRuleID=88, got %v", logged.AllowRuleID)
+	}
+}
+
+func TestCheckPrivilege_ImplicitDeny_NilRuleID(t *testing.T) {
+	var logged PrivilegeLogParams
+	d := &stubPrivilegeDB{
+		findPrivilegeIDFn:          func(_ context.Context, _ []string) (int, error) { return 7, nil },
+		userHasPrivilegeWithRuleFn: func(_ context.Context, _, _ int) (bool, *int, error) { return false, nil, nil },
+		logCheckFn: func(_ context.Context, p PrivilegeLogParams) error {
+			logged = p
+			return nil
+		},
+	}
+	session := &SessionRecord{SessionID: 5, UserID: 42}
+	allowed, err := CheckPrivilege(context.Background(), d, session, []string{"sudo"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if allowed {
+		t.Error("expected allowed=false")
+	}
+	if logged.AllowRuleID != nil {
+		t.Errorf("expected AllowRuleID=nil for implicit deny, got %v", logged.AllowRuleID)
 	}
 }
 
@@ -439,7 +470,7 @@ func TestCheckPrivilege_AncestorFallback(t *testing.T) {
 			}
 			return 0, ErrNotFound
 		},
-		userHasPrivilegeFn: func(_ context.Context, _, _ int) (bool, error) { return true, nil },
+		userHasPrivilegeWithRuleFn: func(_ context.Context, _, _ int) (bool, *int, error) { return true, intPtr(1), nil },
 	}
 	session := &SessionRecord{SessionID: 1, UserID: 1}
 	allowed, err := CheckPrivilege(context.Background(), d, session, []string{"sudo", "users", "read"})
@@ -456,8 +487,8 @@ func TestCheckPrivilege_AncestorFallback(t *testing.T) {
 
 func TestCheckPrivilege_LogErrorIgnored(t *testing.T) {
 	d := &stubPrivilegeDB{
-		findPrivilegeIDFn:  func(_ context.Context, _ []string) (int, error) { return 1, nil },
-		userHasPrivilegeFn: func(_ context.Context, _, _ int) (bool, error) { return true, nil },
+		findPrivilegeIDFn:          func(_ context.Context, _ []string) (int, error) { return 1, nil },
+		userHasPrivilegeWithRuleFn: func(_ context.Context, _, _ int) (bool, *int, error) { return true, intPtr(1), nil },
 		logCheckFn: func(_ context.Context, _ PrivilegeLogParams) error {
 			return errors.New("db: connection lost")
 		},
