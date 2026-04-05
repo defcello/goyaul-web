@@ -15,6 +15,7 @@ type Config struct {
 	DBPassword string `json:"db_password"`
 	DBSSLMode  string `json:"db_sslmode"`
 	SiteName   string `json:"site_name"`
+	FlashKey   string `json:"flash_key"`
 }
 
 // Load reads and parses the JSON config file at path.
