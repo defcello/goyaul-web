@@ -185,3 +185,57 @@ func failResult() LoginResult {
 		ErrMessage: "The provided login details could not be verified. Please check your details and try again.",
 	}
 }
+
+// PrivilegeLogParams is the input to LogPrivilegeCheck.
+type PrivilegeLogParams struct {
+	SessionID   int
+	PrivilegeID int
+	Allowed     bool
+}
+
+// PrivilegeDB is the subset of database methods required by CheckPrivilege.
+type PrivilegeDB interface {
+	// FindPrivilegeID returns the database ID for the privilege at the given path.
+	// The path is ordered from root to leaf, e.g. ["sudo", "users", "read"].
+	// Returns ErrNotFound when no matching privilege exists.
+	FindPrivilegeID(ctx context.Context, path []string) (int, error)
+	// UserHasPrivilege reports whether userID holds the privilege identified by privilegeID.
+	UserHasPrivilege(ctx context.Context, userID, privilegeID int) (bool, error)
+	// LogPrivilegeCheck writes a privilege check event to the audit log.
+	LogPrivilegeCheck(ctx context.Context, params PrivilegeLogParams) error
+}
+
+// CheckPrivilege reports whether the session user holds the privilege at
+// privilegePath and writes an audit-log entry. It mirrors PyYAUL.Web's
+// ancestor fallback: if the exact path is not found it retries with
+// progressively shorter ancestor paths until a match is found or the
+// path is exhausted (in which case it returns false without logging).
+func CheckPrivilege(ctx context.Context, d PrivilegeDB, session *SessionRecord, privilegePath []string) (bool, error) {
+	// Find the most-specific matching privilege, falling back to ancestors.
+	privilegeID := 0
+	for i := len(privilegePath); i > 0; i-- {
+		id, err := d.FindPrivilegeID(ctx, privilegePath[:i])
+		if err == nil {
+			privilegeID = id
+			break
+		}
+		if !errors.Is(err, ErrNotFound) {
+			return false, err
+		}
+	}
+	if privilegeID == 0 {
+		// No matching privilege at any level — deny silently (nothing to log).
+		return false, nil
+	}
+
+	allowed, err := d.UserHasPrivilege(ctx, session.UserID, privilegeID)
+	if err != nil {
+		return false, err
+	}
+	_ = d.LogPrivilegeCheck(ctx, PrivilegeLogParams{
+		SessionID:   session.SessionID,
+		PrivilegeID: privilegeID,
+		Allowed:     allowed,
+	})
+	return allowed, nil
+}

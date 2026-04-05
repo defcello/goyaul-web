@@ -336,6 +336,142 @@ func TestLogin_Success_RememberMe(t *testing.T) {
 	}
 }
 
+// --- CheckPrivilege tests ---
+
+// stubPrivilegeDB implements PrivilegeDB using function fields.
+type stubPrivilegeDB struct {
+	findPrivilegeIDFn  func(ctx context.Context, path []string) (int, error)
+	userHasPrivilegeFn func(ctx context.Context, userID, privilegeID int) (bool, error)
+	logCheckFn         func(ctx context.Context, params PrivilegeLogParams) error
+}
+
+func (s *stubPrivilegeDB) FindPrivilegeID(ctx context.Context, path []string) (int, error) {
+	return s.findPrivilegeIDFn(ctx, path)
+}
+func (s *stubPrivilegeDB) UserHasPrivilege(ctx context.Context, userID, privilegeID int) (bool, error) {
+	return s.userHasPrivilegeFn(ctx, userID, privilegeID)
+}
+func (s *stubPrivilegeDB) LogPrivilegeCheck(ctx context.Context, params PrivilegeLogParams) error {
+	if s.logCheckFn != nil {
+		return s.logCheckFn(ctx, params)
+	}
+	return nil
+}
+
+func TestCheckPrivilege_Allowed(t *testing.T) {
+	var logged PrivilegeLogParams
+	d := &stubPrivilegeDB{
+		findPrivilegeIDFn:  func(_ context.Context, _ []string) (int, error) { return 7, nil },
+		userHasPrivilegeFn: func(_ context.Context, _, _ int) (bool, error) { return true, nil },
+		logCheckFn: func(_ context.Context, p PrivilegeLogParams) error {
+			logged = p
+			return nil
+		},
+	}
+	session := &SessionRecord{SessionID: 5, UserID: 42}
+	allowed, err := CheckPrivilege(context.Background(), d, session, []string{"sudo"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !allowed {
+		t.Error("expected allowed=true")
+	}
+	if logged.SessionID != 5 || logged.PrivilegeID != 7 || !logged.Allowed {
+		t.Errorf("unexpected log params: %+v", logged)
+	}
+}
+
+func TestCheckPrivilege_Denied(t *testing.T) {
+	var logged PrivilegeLogParams
+	d := &stubPrivilegeDB{
+		findPrivilegeIDFn:  func(_ context.Context, _ []string) (int, error) { return 7, nil },
+		userHasPrivilegeFn: func(_ context.Context, _, _ int) (bool, error) { return false, nil },
+		logCheckFn: func(_ context.Context, p PrivilegeLogParams) error {
+			logged = p
+			return nil
+		},
+	}
+	session := &SessionRecord{SessionID: 5, UserID: 42}
+	allowed, err := CheckPrivilege(context.Background(), d, session, []string{"sudo"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if allowed {
+		t.Error("expected allowed=false")
+	}
+	if logged.Allowed {
+		t.Error("expected log entry to record Allowed=false")
+	}
+}
+
+func TestCheckPrivilege_PrivilegeNotFound_ReturnsFalseNoLog(t *testing.T) {
+	logCalled := false
+	d := &stubPrivilegeDB{
+		findPrivilegeIDFn: func(_ context.Context, _ []string) (int, error) {
+			return 0, ErrNotFound
+		},
+		logCheckFn: func(_ context.Context, _ PrivilegeLogParams) error {
+			logCalled = true
+			return nil
+		},
+	}
+	session := &SessionRecord{SessionID: 5, UserID: 42}
+	allowed, err := CheckPrivilege(context.Background(), d, session, []string{"sudo", "users", "read"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if allowed {
+		t.Error("expected allowed=false when privilege not found")
+	}
+	if logCalled {
+		t.Error("expected no log entry when privilege not found")
+	}
+}
+
+func TestCheckPrivilege_AncestorFallback(t *testing.T) {
+	// "sudo/users/read" not found; "sudo/users" not found; "sudo" found with id=3.
+	calls := 0
+	d := &stubPrivilegeDB{
+		findPrivilegeIDFn: func(_ context.Context, path []string) (int, error) {
+			calls++
+			if len(path) == 1 && path[0] == "sudo" {
+				return 3, nil
+			}
+			return 0, ErrNotFound
+		},
+		userHasPrivilegeFn: func(_ context.Context, _, _ int) (bool, error) { return true, nil },
+	}
+	session := &SessionRecord{SessionID: 1, UserID: 1}
+	allowed, err := CheckPrivilege(context.Background(), d, session, []string{"sudo", "users", "read"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !allowed {
+		t.Error("expected allowed=true via ancestor fallback")
+	}
+	if calls != 3 {
+		t.Errorf("expected 3 FindPrivilegeID calls (leaf→root), got %d", calls)
+	}
+}
+
+func TestCheckPrivilege_LogErrorIgnored(t *testing.T) {
+	d := &stubPrivilegeDB{
+		findPrivilegeIDFn:  func(_ context.Context, _ []string) (int, error) { return 1, nil },
+		userHasPrivilegeFn: func(_ context.Context, _, _ int) (bool, error) { return true, nil },
+		logCheckFn: func(_ context.Context, _ PrivilegeLogParams) error {
+			return errors.New("db: connection lost")
+		},
+	}
+	session := &SessionRecord{SessionID: 1, UserID: 1}
+	allowed, err := CheckPrivilege(context.Background(), d, session, []string{"sudo"})
+	if err != nil {
+		t.Fatalf("expected log error to be ignored, got: %v", err)
+	}
+	if !allowed {
+		t.Error("expected allowed=true despite log error")
+	}
+}
+
 func TestLogin_CreateSessionError(t *testing.T) {
 	const password = "correct-horse-battery-staple"
 	hash := mustHash(t, password)

@@ -95,6 +95,28 @@ func RequireAuth(next http.Handler) http.Handler {
 	})
 }
 
+// RequirePrivilege returns a middleware that checks whether the authenticated
+// session holds the given privilege. If no session is present or the privilege
+// is denied, the request is redirected to redirectURL.
+// It calls auth.CheckPrivilege, which logs the decision to the audit log.
+func RequirePrivilege(d auth.PrivilegeDB, privilegePath []string, redirectURL string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			session := SessionFromContext(r.Context())
+			if session == nil {
+				http.Redirect(w, r, redirectURL, http.StatusFound)
+				return
+			}
+			allowed, err := auth.CheckPrivilege(r.Context(), d, session, privilegePath)
+			if err != nil || !allowed {
+				http.Redirect(w, r, redirectURL, http.StatusFound)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // SessionFromContext retrieves the SessionRecord from the request context, or nil.
 func SessionFromContext(ctx context.Context) *auth.SessionRecord {
 	v, _ := ctx.Value(ctxKeySession).(*auth.SessionRecord)
