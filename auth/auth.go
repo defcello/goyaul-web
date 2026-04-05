@@ -215,7 +215,12 @@ type PrivilegeDB interface {
 // ancestor fallback: if the exact path is not found it retries with
 // progressively shorter ancestor paths until a match is found or the
 // path is exhausted (in which case it returns false without logging).
-func CheckPrivilege(ctx context.Context, d PrivilegeDB, session *SessionRecord, privilegePath []string) (bool, error) {
+//
+// onLogErr, if provided, is called when the audit-log write fails. The
+// privilege decision is returned regardless — a log failure never blocks
+// the request. Pass a function that routes the error to your own logger
+// or monitoring system (e.g. log.Printf).
+func CheckPrivilege(ctx context.Context, d PrivilegeDB, session *SessionRecord, privilegePath []string, onLogErr ...func(error)) (bool, error) {
 	// Find the most-specific matching privilege, falling back to ancestors.
 	privilegeID := 0
 	for i := len(privilegePath); i > 0; i-- {
@@ -237,11 +242,13 @@ func CheckPrivilege(ctx context.Context, d PrivilegeDB, session *SessionRecord, 
 	if err != nil {
 		return false, err
 	}
-	_ = d.LogPrivilegeCheck(ctx, PrivilegeLogParams{
+	if logErr := d.LogPrivilegeCheck(ctx, PrivilegeLogParams{
 		SessionID:   session.SessionID,
 		PrivilegeID: privilegeID,
 		AllowRuleID: ruleID,
 		Allowed:     allowed,
-	})
+	}); logErr != nil && len(onLogErr) > 0 {
+		onLogErr[0](logErr)
+	}
 	return allowed, nil
 }

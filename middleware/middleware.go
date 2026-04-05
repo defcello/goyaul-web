@@ -107,7 +107,9 @@ func RequirePrivilege(d auth.PrivilegeDB, privilegePath []string, redirectURL st
 				http.Redirect(w, r, redirectURL, http.StatusFound)
 				return
 			}
-			allowed, err := auth.CheckPrivilege(r.Context(), d, session, privilegePath)
+			allowed, err := auth.CheckPrivilege(r.Context(), d, session, privilegePath, func(logErr error) {
+				log.Printf("privilege log write failed: %v", logErr)
+			})
 			if err != nil || !allowed {
 				http.Redirect(w, r, redirectURL, http.StatusFound)
 				return

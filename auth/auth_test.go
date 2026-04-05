@@ -485,7 +485,33 @@ func TestCheckPrivilege_AncestorFallback(t *testing.T) {
 	}
 }
 
-func TestCheckPrivilege_LogErrorIgnored(t *testing.T) {
+func TestCheckPrivilege_LogError_CallsHandler(t *testing.T) {
+	logErr := errors.New("db: connection lost")
+	d := &stubPrivilegeDB{
+		findPrivilegeIDFn:          func(_ context.Context, _ []string) (int, error) { return 1, nil },
+		userHasPrivilegeWithRuleFn: func(_ context.Context, _, _ int) (bool, *int, error) { return true, intPtr(1), nil },
+		logCheckFn: func(_ context.Context, _ PrivilegeLogParams) error {
+			return logErr
+		},
+	}
+	session := &SessionRecord{SessionID: 1, UserID: 1}
+
+	var capturedErr error
+	allowed, err := CheckPrivilege(context.Background(), d, session, []string{"sudo"}, func(e error) {
+		capturedErr = e
+	})
+	if err != nil {
+		t.Fatalf("expected log error not to propagate as fatal, got: %v", err)
+	}
+	if !allowed {
+		t.Error("expected allowed=true despite log error")
+	}
+	if capturedErr != logErr {
+		t.Errorf("expected onLogErr to be called with %v, got %v", logErr, capturedErr)
+	}
+}
+
+func TestCheckPrivilege_LogError_NoHandler(t *testing.T) {
 	d := &stubPrivilegeDB{
 		findPrivilegeIDFn:          func(_ context.Context, _ []string) (int, error) { return 1, nil },
 		userHasPrivilegeWithRuleFn: func(_ context.Context, _, _ int) (bool, *int, error) { return true, intPtr(1), nil },
@@ -494,9 +520,10 @@ func TestCheckPrivilege_LogErrorIgnored(t *testing.T) {
 		},
 	}
 	session := &SessionRecord{SessionID: 1, UserID: 1}
+	// No onLogErr provided — error is silently suppressed.
 	allowed, err := CheckPrivilege(context.Background(), d, session, []string{"sudo"})
 	if err != nil {
-		t.Fatalf("expected log error to be ignored, got: %v", err)
+		t.Fatalf("expected log error to be suppressed when no handler provided, got: %v", err)
 	}
 	if !allowed {
 		t.Error("expected allowed=true despite log error")
