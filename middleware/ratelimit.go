@@ -13,6 +13,36 @@ type userRateLimiter struct {
 	window  time.Duration
 }
 
+func newUserRateLimiter(maxRequests int, window time.Duration) *userRateLimiter {
+	l := &userRateLimiter{
+		records: make(map[int][]time.Time),
+		max:     maxRequests,
+		window:  window,
+	}
+	go l.pruneLoop()
+	return l
+}
+
+func (l *userRateLimiter) pruneLoop() {
+	ticker := time.NewTicker(l.window)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		l.pruneStale(time.Now().Add(-l.window))
+	}
+}
+
+func (l *userRateLimiter) pruneStale(cutoff time.Time) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	for userID, times := range l.records {
+		if len(times) == 0 || times[len(times)-1].Before(cutoff) {
+			delete(l.records, userID)
+		}
+	}
+}
+
 // allow returns true if the user is within the rate limit and records the attempt.
 func (l *userRateLimiter) allow(userID int) bool {
 	now := time.Now()
@@ -46,11 +76,7 @@ func (l *userRateLimiter) allow(userID int) bool {
 // through unchanged (apply RequireAuth before this middleware to block unauthenticated
 // users). Returns 429 Too Many Requests when the limit is exceeded.
 func NewUserRateLimit(maxRequests int, window time.Duration) func(http.Handler) http.Handler {
-	l := &userRateLimiter{
-		records: make(map[int][]time.Time),
-		max:     maxRequests,
-		window:  window,
-	}
+	l := newUserRateLimiter(maxRequests, window)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodPost {

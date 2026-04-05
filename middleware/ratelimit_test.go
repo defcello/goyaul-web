@@ -115,3 +115,27 @@ func TestNewUserRateLimit_NoSessionPassesThrough(t *testing.T) {
 		t.Errorf("unauthenticated POST got %d, want 200 (middleware should pass through)", w.Code)
 	}
 }
+
+func TestUserRateLimiter_PruneStaleRemovesExpiredAndEmptyEntries(t *testing.T) {
+	now := time.Now()
+	l := &userRateLimiter{
+		records: map[int][]time.Time{
+			1: {},
+			2: {now.Add(-2 * time.Minute)},
+			3: {now.Add(-30 * time.Second)},
+		},
+		window: time.Minute,
+	}
+
+	l.pruneStale(now.Add(-l.window))
+
+	if _, ok := l.records[1]; ok {
+		t.Fatalf("expected empty entry to be pruned")
+	}
+	if _, ok := l.records[2]; ok {
+		t.Fatalf("expected expired entry to be pruned")
+	}
+	if _, ok := l.records[3]; !ok {
+		t.Fatalf("expected recent entry to be retained")
+	}
+}
