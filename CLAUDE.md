@@ -31,6 +31,7 @@ auth/auth_test.go   — Unit tests (14 tests, stub LoginDB)
 middleware/         — SecurityHeaders, RequestLogger, LoadSession(cookieName, SessionDB), RequireAuth,
                       NewUserRateLimit(max, window) — in-memory per-user POST rate limiter
                       SessionFromContext / WithSession helpers
+                      SetFlash(w, key, msg, secure) / ConsumeFlash(w, r, key) — HMAC-SHA256 signed cookie
 config/config.go    — cfg.json parsing + DSN builder
 ```
 
@@ -48,4 +49,4 @@ config/config.go    — cfg.json parsing + DSN builder
 
 ## Consumers
 
-- `github.com/defcello/skilltrails` — uses local replace: `replace github.com/defcello/goyaul-web => ../goyaul-web`
+- `github.com/defcello/skilltrails` — depends on versioned releases; use a `replace` directive in skilltrails/go.mod only during local development
