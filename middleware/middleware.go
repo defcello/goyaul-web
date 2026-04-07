@@ -3,8 +3,10 @@ package middleware
 import (
 	"context"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/defcello/goyaul-web/auth"
@@ -27,11 +29,58 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
-		w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		if isHTTPSRequest(r) {
+			w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		}
 		w.Header().Set("Content-Security-Policy", "default-src 'self'")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 		next.ServeHTTP(w, r)
 	})
+}
+
+// EnforceHTTPS redirects plaintext requests to HTTPS when enabled.
+// Local development hosts such as localhost and loopback addresses are excluded.
+func EnforceHTTPS(enabled bool) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		if !enabled {
+			return next
+		}
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if isHTTPSRequest(r) || isLocalhostHost(r.Host) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			target := "https://" + r.Host + r.URL.RequestURI()
+			http.Redirect(w, r, target, http.StatusMovedPermanently)
+		})
+	}
+}
+
+func isHTTPSRequest(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	forwardedProto := r.Header.Get("X-Forwarded-Proto")
+	if forwardedProto == "" {
+		return false
+	}
+	firstValue := strings.TrimSpace(strings.ToLower(strings.Split(forwardedProto, ",")[0]))
+	return firstValue == "https"
+}
+
+func isLocalhostHost(hostport string) bool {
+	host := hostport
+	if parsedHost, _, err := net.SplitHostPort(hostport); err == nil {
+		host = parsedHost
+	}
+	host = strings.TrimPrefix(host, "[")
+	host = strings.TrimSuffix(host, "]")
+	host = strings.ToLower(host)
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // responseRecorder wraps http.ResponseWriter to capture the written status code.
