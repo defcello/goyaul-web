@@ -1,0 +1,103 @@
+{{define "activities-new"}}
+{{template "page-head" .}}
+
+{{template "nav-authenticated" .}}
+
+<main class="content-page">
+  <div class="content-card">
+    <h2>Create New Activity</h2>
+
+    {{if .Flash}}
+    <div class="flash flash--notice" role="alert">{{.Flash}}</div>
+    {{end}}
+
+    <form method="POST" action="/activities/new" class="settings-form" novalidate>
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+      {{/* ── Activity Type ── */}}
+      <div class="field">
+        <label for="activity_type">Activity type</label>
+        <select id="activity_type" name="activity_type" onchange="toggleCustomType(this.value)">
+          <option value="">— select a type —</option>
+          <option value="Practice">Practice</option>
+          <option value="Perform">Perform</option>
+          <option value="Observe">Observe</option>
+          <option value="Study">Study</option>
+          <option value="Vibe">Vibe</option>
+          <option value="Custom">Custom…</option>
+        </select>
+      </div>
+
+      {{/* ── Custom Type (shown only when "Custom" is selected) ── */}}
+      <div class="field" id="custom-type-field" style="display:none">
+        <label for="activity_type_custom">Custom type description</label>
+        <input
+          type="text"
+          id="activity_type_custom"
+          name="activity_type_custom"
+          maxlength="100"
+          placeholder="e.g. Improvisation, Sight-reading"
+        >
+      </div>
+
+      {{/* ── Subject ── */}}
+      <div class="field">
+        <label for="subject">Subject</label>
+        <input
+          type="text"
+          id="subject"
+          name="subject"
+          maxlength="255"
+          placeholder="e.g. C Major Scale (3 Octaves), Bach Cello Suite No. 1"
+        >
+      </div>
+
+      {{/* ── Equipment ── */}}
+      <div class="field">
+        <label for="equipment">Equipment</label>
+        <input
+          type="text"
+          id="equipment"
+          name="equipment"
+          maxlength="255"
+          placeholder="e.g. Cello, Guitar, Piano"
+        >
+      </div>
+
+      {{/* ── Duration ── */}}
+      <div class="field">
+        <label for="duration_minutes">Estimated duration (minutes)</label>
+        <input
+          type="number"
+          id="duration_minutes"
+          name="duration_minutes"
+          value="5"
+          min="1"
+          style="width:6rem"
+        >
+      </div>
+
+      {{/* ── Visibility ── */}}
+      <div class="field">
+        <label for="visibility">Visibility</label>
+        <select id="visibility" name="visibility">
+          <option value="private" selected>Private</option>
+          <option value="unlisted">Unlisted</option>
+          <option value="public">Public</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn--primary">Save</button>
+    </form>
+  </div>
+</main>
+
+<script>
+function toggleCustomType(value) {
+  document.getElementById('custom-type-field').style.display =
+    value === 'Custom' ? '' : 'none';
+}
+</script>
+
+{{template "page-foot" .}}
+{{end}}
