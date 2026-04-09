@@ -21,6 +21,30 @@ go test -buildvcs=false ./...
 go vet -buildvcs=false ./...
 ```
 
+### CSS / Frontend
+
+Node.js is required for the Tailwind CSS build. On Windows, `node` may not be in the
+bash PATH — add it first:
+
+```bash
+export PATH="/c/Program Files/nodejs:$PATH"
+```
+
+```bash
+# One-time: install dev dependencies
+npm install
+
+# Build minified CSS (run after editing input.css or templates)
+npm run build
+
+# Watch mode during development
+npm run watch
+```
+
+`pages/static/css/style.css` is the **compiled output** — always commit it alongside
+any change to `input.css` or the templates so consumers get the updated styles via
+`go get`.  Never edit `style.css` directly; edit `input.css` instead.
+
 ## Architecture
 
 ```

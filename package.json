@@ -1,0 +1,11 @@
+{
+  "name": "goyaul-web-frontend",
+  "private": true,
+  "scripts": {
+    "build": "tailwindcss -i ./pages/static/css/input.css -o ./pages/static/css/style.css --minify",
+    "watch": "tailwindcss -i ./pages/static/css/input.css -o ./pages/static/css/style.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
