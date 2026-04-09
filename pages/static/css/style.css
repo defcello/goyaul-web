@@ -6,16 +6,16 @@
 }
 
 :root {
-  --color-bg:       #f5f6fa;
+  --color-bg:       #EEF5FB;
   --color-surface:  #ffffff;
-  --color-primary:  #4a6fa5;
-  --color-primary-dark: #3a5a8c;
+  --color-primary:  #4A8EC4;
+  --color-primary-dark: #3572A0;
   --color-text:     #2d3748;
-  --color-muted:    #718096;
-  --color-border:   #e2e8f0;
+  --color-muted:    #6B7F96;
+  --color-border:   #D4E4F0;
   --color-error-bg: #fff5f5;
   --color-error:    #c53030;
-  --color-avatar:   #4a6fa5;
+  --color-avatar:   #4A8EC4;
   --radius:         8px;
   --shadow:         0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -217,7 +217,7 @@ a.site-name:hover {
 .field input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.15);
+  box-shadow: 0 0 0 3px rgba(74, 142, 196, 0.15);
 }
 
 .field--checkbox {
@@ -263,7 +263,7 @@ a.site-name:hover {
   border: 1px solid var(--color-border);
 }
 .btn--secondary:hover {
-  background: #edf2f7;
+  background: #E4F0F8;
 }
 .btn--danger {
   background: #c53030;
