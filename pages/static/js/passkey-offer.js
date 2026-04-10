@@ -34,6 +34,20 @@
     return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
   }
 
+  function deviceLabel() {
+    if (navigator.userAgentData && navigator.userAgentData.platform) {
+      return navigator.userAgentData.platform;
+    }
+    var ua = navigator.userAgent;
+    if (/iPhone/.test(ua)) return "iPhone";
+    if (/iPad/.test(ua)) return "iPad";
+    if (/Android/.test(ua)) return "Android";
+    if (/Macintosh|Mac OS X/.test(ua)) return "Mac";
+    if (/Windows/.test(ua)) return "Windows";
+    if (/Linux/.test(ua)) return "Linux";
+    return "This device";
+  }
+
   function decodeCreation(json) {
     var publicKey = json.publicKey;
     publicKey.challenge = base64UrlToBytes(publicKey.challenge);
@@ -77,7 +91,7 @@
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           csrf_token: form.elements.csrf_token.value,
-          passkey_label: "This device"
+          passkey_label: deviceLabel()
         }).toString()
       });
       if (!startResponse.ok) {
