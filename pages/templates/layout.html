@@ -6,8 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{.Title}} — {{.SiteName}}</title>
   <link rel="stylesheet" href="/static/css/style.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  {{template "page-head-extra" .}}
 </head>
 <body>
 {{end}}
@@ -16,6 +15,8 @@
 </body>
 </html>
 {{end}}
+
+{{define "page-head-extra"}}{{end}}
 
 {{define "nav-authenticated"}}
 <nav class="top-nav">
