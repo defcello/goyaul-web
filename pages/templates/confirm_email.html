@@ -1,0 +1,25 @@
+{{define "confirm_email"}}
+{{template "page-head" .}}
+
+<main class="auth-page">
+  <div class="auth-card">
+    <h1 class="auth-title">{{.SiteName}}</h1>
+
+    {{if .ConfirmError}}
+    <h2 class="auth-subtitle">Link Expired or Invalid</h2>
+    <p class="auth-intro">This confirmation link is no longer valid. It may have already been used or may have expired.</p>
+    <p class="auth-footer">
+      <a href="/account">Return to Account Settings</a>
+    </p>
+    {{else}}
+    <h2 class="auth-subtitle">Email Confirmed</h2>
+    <p class="auth-intro">Your email address has been updated successfully.</p>
+    <p class="auth-footer">
+      <a href="/account">Return to Account Settings</a>
+    </p>
+    {{end}}
+  </div>
+</main>
+
+{{template "page-foot" .}}
+{{end}}

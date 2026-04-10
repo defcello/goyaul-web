@@ -1,0 +1,18 @@
+{{define "email_sent"}}
+{{template "page-head" .}}
+
+<main class="auth-page">
+  <div class="auth-card">
+    <h1 class="auth-title">{{.SiteName}}</h1>
+    <h2 class="auth-subtitle">Check Your Email</h2>
+
+    <p class="auth-intro">{{.Message}}</p>
+
+    <p class="auth-footer">
+      <a href="/login">Back to sign in</a>
+    </p>
+  </div>
+</main>
+
+{{template "page-foot" .}}
+{{end}}

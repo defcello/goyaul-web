@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 )
 
 // Config holds database connection parameters loaded from cfg.json.
@@ -16,9 +18,25 @@ type Config struct {
 	DBSSLMode  string `json:"db_sslmode"`
 	SiteName   string `json:"site_name"`
 	FlashKey   string `json:"flash_key"`
+
+	// Email configuration. All fields may also be supplied via environment
+	// variables (EMAIL_HOST, EMAIL_PORT, EMAIL_USERNAME, EMAIL_PASSWORD,
+	// EMAIL_FROM, EMAIL_REPLY_TO) which take precedence over cfg.json values.
+	EmailHost     string `json:"email_host"`
+	EmailPort     int    `json:"email_port"` // 587 = STARTTLS (default), 465 = TLS
+	EmailUsername string `json:"email_username"`
+	EmailPassword string `json:"email_password"`
+	EmailFrom     string `json:"email_from"`
+	EmailReplyTo  string `json:"email_reply_to"`
+
+	// SignupEnabled controls whether the /signup page renders a real
+	// registration form. When false the page shows an invitation-only notice.
+	// May also be set via the SIGNUP_ENABLED environment variable ("true"/"1").
+	SignupEnabled bool `json:"signup_enabled"`
 }
 
-// Load reads and parses the JSON config file at path.
+// Load reads and parses the JSON config file at path, then applies any
+// EMAIL_* / SIGNUP_ENABLED environment variable overrides.
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -28,7 +46,37 @@ func Load(path string) (*Config, error) {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("config: parse: %w", err)
 	}
+	cfg.applyEnvOverrides()
 	return &cfg, nil
+}
+
+// applyEnvOverrides replaces email/signup fields with environment variables
+// when they are set, so production deployments (e.g. Heroku) can supply
+// credentials without a cfg.json entry.
+func (c *Config) applyEnvOverrides() {
+	if v := os.Getenv("EMAIL_HOST"); v != "" {
+		c.EmailHost = v
+	}
+	if v := os.Getenv("EMAIL_PORT"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			c.EmailPort = n
+		}
+	}
+	if v := os.Getenv("EMAIL_USERNAME"); v != "" {
+		c.EmailUsername = v
+	}
+	if v := os.Getenv("EMAIL_PASSWORD"); v != "" {
+		c.EmailPassword = v
+	}
+	if v := os.Getenv("EMAIL_FROM"); v != "" {
+		c.EmailFrom = v
+	}
+	if v := os.Getenv("EMAIL_REPLY_TO"); v != "" {
+		c.EmailReplyTo = v
+	}
+	if v := os.Getenv("SIGNUP_ENABLED"); v != "" {
+		c.SignupEnabled = strings.EqualFold(v, "true") || v == "1"
+	}
 }
 
 // DSN returns a PostgreSQL connection string built from the config fields.
