@@ -66,6 +66,9 @@ config/config.go    — cfg.json parsing + DSN builder
 - `SessionDB` interface: `GetSessionByCookieID` + `TouchSession` for request middleware
 - Cookie name is a `LoadSession` parameter — not hardcoded
 - Only external dependency: `golang.org/x/crypto` (bcrypt)
+- **Framework-agnostic layout**: `page-head` loads only the compiled Tailwind CSS. Do NOT add JS framework CDN links here. Consumers inject their stack by overriding the `page-head-extra` template (default is a no-op). See skilltrails `layout_override.html` for the pattern.
+
+> **Tailwind JIT scope**: `tailwind.config.js` only scans `./pages/templates/**/*.html`. Consumer templates in other repos will not be scanned — consumers must either use the CDN Play script or compile Tailwind locally.
 
 ## Dependencies
 
