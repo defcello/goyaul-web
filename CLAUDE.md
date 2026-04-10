@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-**goyaul-web** is a generic Go web authentication framework extracted from SkillTrails. It provides login logic, HTTP middleware, and configuration loading for Go web applications built with chi.
+**goyaul-web** is a generic Go web authentication framework. It provides login logic, HTTP middleware, and configuration loading for Go web applications built with chi.
 
-This repo is one of several sub-repos managed under `devenv-skilltrails/` via `manifest.xml`.
+This repo is one of several sub-repos managed by a parent devenv repo via `manifest.xml`.
 
 ## Commands
 
@@ -50,7 +50,7 @@ any change to `input.css` or the templates so consumers get the updated styles v
 ```
 auth/auth.go        — Login(), lockout logic, in-memory IP rate limiter
                       Types: SessionRecord, UserLookupResult, LogLoginParams, ErrNotFound
-                      Interface: LoginDB (implemented by consumers e.g. skilltrails/internal/db)
+                      Interface: LoginDB (implemented by consumers e.g. myapp/internal/db)
 auth/auth_test.go   — Unit tests (14 tests, stub LoginDB)
 middleware/         — SecurityHeaders, RequestLogger, LoadSession(cookieName, SessionDB), RequireAuth,
                       NewUserRateLimit(max, window) — in-memory per-user POST rate limiter
@@ -66,7 +66,7 @@ config/config.go    — cfg.json parsing + DSN builder
 - `SessionDB` interface: `GetSessionByCookieID` + `TouchSession` for request middleware
 - Cookie name is a `LoadSession` parameter — not hardcoded
 - Only external dependency: `golang.org/x/crypto` (bcrypt)
-- **Framework-agnostic layout**: `page-head` loads only the compiled Tailwind CSS. Do NOT add JS framework CDN links here. Consumers inject their stack by overriding the `page-head-extra` template (default is a no-op). See skilltrails `layout_override.html` for the pattern.
+- **Framework-agnostic layout**: `page-head` loads only the compiled Tailwind CSS. Do NOT add JS framework CDN links here. Consumers inject their stack by overriding the `page-head-extra` template (default is a no-op). See your consumer app's `layout_override.html` for the pattern.
 
 > **Tailwind JIT scope**: `tailwind.config.js` only scans `./pages/templates/**/*.html`. Consumer templates in other repos will not be scanned — consumers must either use the CDN Play script or compile Tailwind locally.
 
@@ -76,4 +76,4 @@ config/config.go    — cfg.json parsing + DSN builder
 
 ## Consumers
 
-- `github.com/defcello/skilltrails` — depends on versioned releases; use a `replace` directive in skilltrails/go.mod only during local development
+- Consumer apps depend on versioned releases; use a `replace` directive in go.mod only during local development.
